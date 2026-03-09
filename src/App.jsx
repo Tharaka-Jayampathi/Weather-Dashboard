@@ -1,36 +1,70 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 
 // IMPORTANT: Replace this with your actual OpenWeatherMap API key
-const API_KEY = 'YOUR_API_KEY_HERE';
+const API_KEY = 'a382ae32ed638775ca3dbd4f3ed651ea';
 
 function App() {
-  useEffect(() => {
-    // We define an async function inside useEffect to handle the data fetching
-    const fetchWeatherData = async () => {
-      try {
-        const city = "Deniyaya, Sri Lanka";
-        // The endpoint URL for Current Weather Data
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+  const [weatherData, setWeatherData] = useState(null);
+  const [searchCity, setSearchCity] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-        // Fetch data using Axios
-        const response = await axios.get(url);
+  const fetchWeatherData = async (city) => {
+    if (!city.trim()) return;
 
-        // Log the result to the browser console per the requirement
-        console.log("Current Weather Data:", response.data);
-      } catch (error) {
-        console.error("Error fetching the weather data:", error);
+    setIsLoading(true);
+    setError(null);
+    setWeatherData(null);
+
+    try {
+      const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${API_KEY}&units=metric`;
+      const response = await axios.get(url);
+      setWeatherData(response.data);
+    } catch (err) {
+      console.error("Error fetching the weather data:", err);
+      if (err.response && err.response.status === 404) {
+        setError("City not found. Please try again.");
+      } else {
+        setError("An error occurred while fetching weather data.");
       }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    // Call the function when the component mounts
-    fetchWeatherData();
-  }, []); // Empty dependency array ensures this runs only once on mount
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchWeatherData(searchCity);
+  };
 
   return (
     <div>
       <h1>Weather Dashboard</h1>
-      <p>Check the browser console to see the fetched weather data for Deniyaya, Sri Lanka.</p>
+
+      <form onSubmit={handleSearch}>
+        <input
+          type="text"
+          value={searchCity}
+          onChange={(e) => setSearchCity(e.target.value)}
+          placeholder="Enter city name..."
+        />
+        <button type="submit">Search</button>
+      </form>
+
+      {isLoading && <p>Loading...</p>}
+
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      {weatherData && !isLoading && !error && (
+        <div>
+          <h2>{weatherData.name}, {weatherData.sys.country}</h2>
+          <p>Temperature: {weatherData.main.temp} °C</p>
+          <p>Humidity: {weatherData.main.humidity}%</p>
+          <p>Wind Speed: {weatherData.wind.speed} m/s</p>
+          <p>Weather: {weatherData.weather[0].description}</p>
+        </div>
+      )}
     </div>
   );
 }
